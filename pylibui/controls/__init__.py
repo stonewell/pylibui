@@ -3,7 +3,7 @@
 
 """
 
-from .area import Area, ScrollingArea
+from .area import Area, ScrollingArea, OpenGLArea, ScrollingOpenGLArea
 from .box import Box, HorizontalBox, VerticalBox
 from .button import Button
 from .colorbutton import ColorButton

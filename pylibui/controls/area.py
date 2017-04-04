@@ -131,3 +131,18 @@ class ScrollingArea(Area):
     def _createControl(self, ah, *args, **kwargs):
         w, h = args
         return libui.uiNewScrollingArea(ah, w, h)
+
+class OpenGLArea(Area):
+    def __init__(self, *args, **kwargs):
+        super().__init__(args, kwargs)
+
+    def _createControl(self, ah, *args, **kwargs):
+        return libui.uiNewOpenGLArea(ah)
+    
+class ScrollingOpenGLArea(Area):
+    def __init__(self, w, h):
+        super().__init__(w, h)
+
+    def _createControl(self, ah, *args, **kwargs):
+        w, h = args
+        return libui.uiNewScrollingOpenGLArea(ah, w, h)

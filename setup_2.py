@@ -7,7 +7,7 @@ Usage:
 
 from setuptools import setup
 
-APP = ['examples/histogram.py']
+APP = ['examples/histogram_opengl.py']
 DATA_FILES = []
 OPTIONS = {'argv_emulation': True,
                'includes':[],
