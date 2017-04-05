@@ -23,10 +23,12 @@ class Spinbox(Control):
         def handler(window, data):
             self.onChanged(data)
             return 0
-
+        
+        self._change_callback_ptr, self._change_callback = \
+          get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp)
         self.changedHandler = libui.uiSpinboxOnChanged(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
-                                                       None)
+                                                    self._change_callback_ptr,
+                                                     None)
 
     def setValue(self, value):
         """

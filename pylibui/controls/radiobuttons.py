@@ -25,9 +25,11 @@ class RadioButtons(Control):
             self.onSelected(data)
             return 0
 
+        self._selected_callback_ptr, self._selected_callback = \
+          get_c_callback_func_ptr(handlerOnSelected, c_func_type_void_structp_voidp)
         self.selectedHandler = libui.uiRadioButtonsOnSelected(
             self.control,
-            get_c_callback_func_ptr(handlerOnSelected, c_func_type_void_structp_voidp),
+            self._selected_callback_ptr,
             None)
 
     def append(self, text):

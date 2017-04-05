@@ -23,8 +23,10 @@ class Button(Control):
             self.onClick(data)
             return 0
 
+        self._click_callback_ptr, self._click_callback = \
+          get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp)
         self.clickHandler = libui.uiButtonOnClicked(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
+                                                    self._click_callback_ptr,
                                                     None)
 
     def setText(self, text):

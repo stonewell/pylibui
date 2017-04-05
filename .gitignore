@@ -24,3 +24,4 @@ pylibui/libui_wrap.c
 .eggs/
 
 venv/
+venv-dbg/

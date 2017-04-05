@@ -20,38 +20,48 @@ class _AreaHandler(libui.uiAreaHandler):
 
         self._area = area
 
-        def handleOnDraw(ah, a, params):
-            _draw_params = libui.toUIAreaDrawParamsPointer(params)
-
-            self._area.onDraw(_draw_params)
-
-        def handleOnMouseEvent(ah, a, event):
-            _mouse_event = libui.toUIAreaMouseEventPointer(event)
-
-            self._area.onMouseEvent(_mouse_event)
-
-        def handleOnMouseCrossed(ah, a, left):
-            self._area.onMouseCrossed(left)
-
-        def handleOnDragBroken(ah, a):
-            self._area.onDragBroken()
-
-        def handleOnKeyEvent(ah, a, event):
-            _key_event = libui.toUIAreaKeyEventPointer(event)
-
-            return self._area.onKeyEvent(_key_event)
-
-        self.Draw = get_c_callback_func_ptr(handleOnDraw,
+        self._draw, self._draw_callback = get_c_callback_func_ptr(self.handleOnDraw,
                                                 c_func_type_void_structp_structp_structp)
-        self.MouseEvent = get_c_callback_func_ptr(handleOnMouseEvent,
+        self._mouseevent, self._mouseevent_callback = get_c_callback_func_ptr(self.handleOnMouseEvent,
                                                 c_func_type_void_structp_structp_structp)
-        self.MouseCrossed = get_c_callback_func_ptr(handleOnMouseCrossed,
+        self._mousecross, self._mousecross_callback = get_c_callback_func_ptr(self.handleOnMouseCrossed,
                                                 c_func_type_void_structp_structp_int)
-        self.DragBroken = get_c_callback_func_ptr(handleOnDragBroken,
+        self._dragbroken, self._dragbroken_callback = get_c_callback_func_ptr(self.handleOnDragBroken,
                                                 c_func_type_void_structp_structp)
-        self.KeyEvent = get_c_callback_func_ptr(handleOnKeyEvent,
+        self._keyevent, self._keyevent_callbck = get_c_callback_func_ptr(self.handleOnKeyEvent,
                                                 c_func_type_int_structp_structp_structp)
+        self.reset_callbacks()
+        
+    def reset_callbacks(self):
+        self.Draw = self._draw
+        self.MouseEvent = self._mouseevent
+        self.MouseCrossed = self._mousecross
+        self.DragBroken = self._dragbroken
+        self.KeyEvent = self._keyevent
 
+    def handleOnDraw(self, ah, a, params):
+        _draw_params = libui.toUIAreaDrawParamsPointer(params)
+
+        self._area.onDraw(_draw_params)
+
+    def handleOnMouseEvent(self, ah, a, event):
+        _mouse_event = libui.toUIAreaMouseEventPointer(event)
+
+        self._area.onMouseEvent(_mouse_event)
+
+    def handleOnMouseCrossed(self, ah, a, left):
+        self._area.onMouseCrossed(left)
+
+    def handleOnDragBroken(self, ah, a):
+        self._area.onDragBroken()
+
+    def handleOnKeyEvent(self, ah, a, event):
+        _key_event = libui.toUIAreaKeyEventPointer(event)
+
+        ret = self._area.onKeyEvent(_key_event)
+
+        return ret
+    
 class Area(Control):
 
     def __init__(self, *args, **kwargs):

@@ -24,17 +24,23 @@ class Window(Control):
             self.onClose(data)
             return 0
 
+        self._closecallback_ptr, self._closecallback = \
+          get_c_callback_func_ptr(handler, c_func_type_int_structp_voidp)
+
         self.closeHandler = libui.uiWindowOnClosing(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_int_structp_voidp),
+                                                        self._closecallback_ptr,
                                                         None)
 
         def handlerOnContentSizeChanged(window, data):
             self.onContentSizeChange(data)
             return 0
 
+        self._contentsize_callback_ptr, self._contentsize_callback = \
+          get_c_callback_func_ptr(handlerOnContentSizeChanged,
+                                      c_func_type_void_structp_voidp)
         self.contentSizeChangedHandler = libui.uiWindowOnContentSizeChanged(
             self.control,
-            get_c_callback_func_ptr(handlerOnContentSizeChanged, c_func_type_void_structp_voidp),
+            self._contentsize_callback_ptr,
             None)
 
     def getTitle(self):

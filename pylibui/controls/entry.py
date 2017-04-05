@@ -62,50 +62,28 @@ class Entry(BaseEntry):
 
         """
         super().__init__()
-        self.control = libui.uiNewEntry()
+        self.control = self._create_control()
 
         def handler(window, data):
             self.onChanged(data)
             return 0
 
+        self._change_callback_ptr, self._change_callback = \
+          get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp)
         self.changedHandler = libui.uiEntryOnChanged(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
+                                                    self._change_callback_ptr,
                                                      None)
 
+    def _create_control(self):
+        return libui.uiNewEntry()
 
 class PasswordEntry(Entry):
 
-    def __init__(self):
-        """
-        Creates a new password entry.
-
-        """
-        super().__init__()
-        self.control = libui.uiNewPasswordEntry()
-
-        def handler(window, data):
-            self.onChanged(data)
-            return 0
-
-        self.changedHandler = libui.uiEntryOnChanged(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
-                                                     None)
+    def _create_control(self):
+        return libui.uiNewPasswordEntry()
 
 
 class SearchEntry(Entry):
 
-    def __init__(self):
-        """
-        Creates a new search entry.
-
-        """
-        super().__init__()
-        self.control = libui.uiNewSearchEntry()
-
-        def handler(window, data):
-            self.onChanged(data)
-            return 0
-
-        self.changedHandler = libui.uiEntryOnChanged(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
-                                                     None)
+    def _create_control(self):
+        return libui.uiNewSearchEntry()

@@ -47,4 +47,4 @@ def get_c_callback_func_ptr(func, c_type):
 
     c_handle_ptr = ctypes.cast(c_callback, ctypes.c_void_p).value
 
-    return c_handle_ptr
+    return (c_handle_ptr, c_callback)

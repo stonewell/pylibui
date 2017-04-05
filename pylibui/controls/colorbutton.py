@@ -22,8 +22,11 @@ class ColorButton(Control):
             self.onColorChanged(data)
             return 0
 
+        self._change_callback_ptr, self._change_callback = \
+          get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp)
+
         self.changedHandler = libui.uiColorButtonOnChanged(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
+                                                               self._change_callback_ptr,
                                                         None)
 
     def getColor(self):

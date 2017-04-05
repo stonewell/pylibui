@@ -22,8 +22,10 @@ class Checkbox(Control):
             self.onToggled(data)
             return 0
 
+        self._toggle_callback_ptr, self._toggle_callback = \
+          get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp)
         self.toggledHandler = libui.uiCheckboxOnToggled(self.control,
-                                                        get_c_callback_func_ptr(handler, c_func_type_void_structp_voidp),
+                                                        self._toggle_callback_ptr,
                                                         None)
 
     def setText(self, text):
