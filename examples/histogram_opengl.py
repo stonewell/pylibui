@@ -97,15 +97,15 @@ class MyArea(OpenGLArea):
         glFlush()
 
     def drawObject2(self):
-        glMatrixMode(GL_PROJECTION)
+        #glMatrixMode(GL_PROJECTION)
         
-        glLoadIdentity()
-        glDisable(GL_DEPTH_TEST)
-        glDisable(GL_CULL_FACE)
-        glDisable(GL_LIGHTING)
-        glEnable(GL_TEXTURE_2D)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        #glLoadIdentity()
+        #glDisable(GL_DEPTH_TEST)
+        #glDisable(GL_CULL_FACE)
+        #glDisable(GL_LIGHTING)
+        #glEnable(GL_TEXTURE_2D)
+        #glEnable(GL_BLEND)
+        #glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         
         glClearColor(0.0, 0.0, 0.0, 0.0)
         
@@ -116,7 +116,7 @@ class MyArea(OpenGLArea):
         glVertex3f( 0.0,  1.0, 0.0)
         glVertex3f(-1.0, -1.0, 0.0)
         glVertex3f( 1.0, -1.0, 0.0)
-        glEnd()
+        #glEnd()
         
         #glTranslatef(3.0,0.0,0.0);
         #glBegin(GL_QUADS)
@@ -126,7 +126,7 @@ class MyArea(OpenGLArea):
         #glVertex3f(-1.0, 1.0, 0.0)
         #glEnd()
 
-        glFlush()
+        #glFlush()
 
     def drawObject(self):
         glColor3f(1.0, 0.85, 0.35)
