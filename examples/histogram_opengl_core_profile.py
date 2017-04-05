@@ -6,7 +6,10 @@ import random
 from pylibui.core import App
 from pylibui.controls import *
 from pylibui import libui
-from OpenGL.GL import *
+from OpenGL import GL
+from OpenGL.GL.shaders import compileShader, compileProgram
+from OpenGL.GL.ARB.vertex_array_object import glBindVertexArray
+from glwrap import glGenVertexArray
 
 histogram = None
 datapoints = []
@@ -30,26 +33,40 @@ class MyColorButton(ColorButton):
         histogram.redrawAll()
 
 vertex_data = [
-  0.,   0.5,   0., 1.,
-  0.5, -0.366, 0., 1.,
- -0.5, -0.366, 0., 1.,
+    0.0, 0.0,
+    0.5, 0.0,
+    0.5, 0.5,
+ 
+    0.0, 0.0,
+    0.0, 0.5,
+    -0.5, 0.5,
+ 
+    0.0, 0.0,
+    -0.5, 0.0,
+    -0.5, -0.5,
+ 
+    0.0, 0.0,
+    0.0, -0.5,
+    0.5, -0.5,
 ]
 
 from ctypes import sizeof, c_float, c_void_p, c_uint
 
 def init_buffers():
     #/* We only use one VAO, so we always keep it bound */
-    vao = glGenVertexArrays(1);
-    glBindVertexArray(vao);
+    #vao = GL.glGenVertexArrays(1)
+    #glBindVertexArray(vao)
 
     #/* This is the buffer that holds the vertices */
-    buffer = glGenBuffers(1);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer);
-    glBufferData(GL_ARRAY_BUFFER, (c_float*len(vertex_data))(*vertex_data), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    buffer = GL.glGenBuffers(1)
+    GL.glBindBuffer(GL.GL_ARRAY_BUFFER, buffer)
+    GL.glBufferData(GL.GL_ARRAY_BUFFER,
+                     len(vertex_data) * 4,
+                     (GL.GLfloat*len(vertex_data))(*vertex_data),
+                        GL.GL_STATIC_DRAW)
+    GL.glBindBuffer(GL.GL_ARRAY_BUFFER, 0)
 
-    print(vao, buffer)
-    return(vao, buffer)
+    return(0, buffer)
 
 def create_shader(type, src):
     shader = glCreateShader(type)
@@ -61,7 +78,7 @@ def create_shader(type, src):
         print("Compile failure in %s shader:\n%s" %(
             "vertex" if type == GL_VERTEX_SHADER else "fragment",
             glGetShaderInfoLog(shader)))
-        glDeleteShader(shader);
+        glDeleteShader(shader)
 
         return None
 
@@ -73,67 +90,36 @@ def read_src(path):
         return f.read()
 
 fragment_src = '''
-#version 330
+#version 130
 
 out vec4 outputColor;
 
 void main() {
-  float lerpVal = gl_FragCoord.y / 500.0f;
-
-  outputColor = mix(vec4(1.0f, 0.85f, 0.35f, 1.0f), vec4(0.2f, 0.2f, 0.2f, 1.0f), lerpVal);
+  outputColor = vec4(1.0f, 0.f, 0.f, 1.0f);
 }
 '''
 
 vertex_src = '''
-#version 330
+#version 130
 
-layout(location = 0) in vec4 position;
-uniform mat4 mvp;
+in vec4 position;
 
 void main() {
-  gl_Position = mvp * position;
+  gl_Position = position;
 }
 '''
 
 def init_shaders(vertex_path, fragment_path):
-    vertex = create_shader(GL_VERTEX_SHADER, vertex_src);
+    v_s = compileShader(vertex_src, GL.GL_VERTEX_SHADER)
+    f_s = compileShader(fragment_src, GL.GL_FRAGMENT_SHADER)
+    program = compileProgram(
+        v_s,
+        f_s
+        )
 
-    if not vertex:
-        return(None, None)
-  
-    fragment = create_shader(GL_FRAGMENT_SHADER, fragment_src);
-
-    if not fragment:
-        glDeleteShader(vertex);
-        return(None, None)
-
-    print(vertex, fragment)
-    
-    program = glCreateProgram();
-    glAttachShader(program, vertex);
-    glAttachShader(program, fragment);
-
-    glLinkProgram(program);
-
-    status = glGetProgramiv(program, GL_LINK_STATUS);
-    if status == GL_FALSE:
-        print("Linking failure:\n%s" % glGetProgramInfoLog(program));
-        glDeleteProgram(program);
-        glDeleteShader(vertex);
-        glDeleteShader(fragment);
-
-        return(None, None)
-
-    #/* Get the location of the "mvp" uniform */
-    mvp = glGetUniformLocation(program, "mvp");
-
-    glDetachShader(program, vertex);
-    glDetachShader(program, fragment);
-    glDeleteShader(vertex);
-    glDeleteShader(fragment);
-
-    print(status, program, mvp)
-    return(program, mvp)
+    GL.glDeleteShader(v_s)
+    GL.glDeleteShader(f_s)
+    return(program, 0)
 
 G_PI = float(3.1415926535897932)
 
@@ -152,16 +138,16 @@ def compute_mvp(phi,
     s3 = math.sin(z)
     c3c2 = c3 * c2
     s3c1 = s3 * c1
-    c3s2s1 = c3 * s2 * s1;
-    s3s1 = s3 * s1;
-    c3s2c1 = c3 * s2 * c1;
-    s3c2 = s3 * c2;
-    c3c1 = c3 * c1;
-    s3s2s1 = s3 * s2 * s1;
-    c3s1 = c3 * s1;
-    s3s2c1 = s3 * s2 * c1;
-    c2s1 = c2 * s1;
-    c2c1 = c2 * c1;
+    c3s2s1 = c3 * s2 * s1
+    s3s1 = s3 * s1
+    c3s2c1 = c3 * s2 * c1
+    s3c2 = s3 * c2
+    c3c1 = c3 * c1
+    s3s2s1 = s3 * s2 * s1
+    c3s1 = c3 * s1
+    s3s2c1 = s3 * s2 * c1
+    c2s1 = c2 * s1
+    c2c1 = c2 * c1
 
     res = [0.0] * 16
 
@@ -185,8 +171,6 @@ def compute_mvp(phi,
     res[7] = 0.
     res[11] = 0.
     res[15] = 1.
-
-    return res
 
         ## /* apply all three rotations using the three matrices:
         ##  *
@@ -217,44 +201,51 @@ def compute_mvp(phi,
     print(res)
     return res
 
+from hello import display, init
+
 class MyArea(OpenGLArea):
     def __init__(self):
         super().__init__()
 
     def onDraw(self, params):
-        glClearColor(0.5, .5, 0.5, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT)
-        self.drawObject2()
-        glFlush()
-
+        print('params', params.ClipWidth,params.ClipHeight)
+        GL.glClearColor(0.5, .5, 0.5, 1.0)
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
+        #self.drawObject2()
+        init()
+        #display()
+        GL.glFlush()
+        #GL.glBindVertexArray( 0 )
+        
     def drawObject2(self):
-        vao, buffer = init_buffers()
         program, mvp_location = init_shaders('glarea-gl.vs.glsl', 'glarea-gl.fs.glsl')
+
+        vao, buffer = init_buffers()
+        glBindVertexArray( glGenVertexArray() )
 
         mvp = compute_mvp(datapoints[0].getValue(),
                               datapoints[1].getValue(),
                               datapoints[2].getValue())
 
-        glUseProgram (program);
+        GL.glUseProgram(program)
 
         #/* Update the "mvp" matrix we use in the shader */
-        glUniformMatrix4fv (mvp_location, 1, GL_FALSE, mvp);
+        #glUniformMatrix4fv(mvp_location, 1, GL_FALSE, mvp)
+        #position_attribute = glGetAttribLocation(program, "position")
 
         #/* Use the vertices in our buffer */
-        glBindBuffer (GL_ARRAY_BUFFER, vao);
-        glEnableVertexAttribArray (0);
-        glVertexAttribPointer (0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+        #glBindVertexArray(vao)
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, buffer)
+        GL.glEnableVertexAttribArray(0)
+        GL.glVertexAttribPointer(0, 2, GL.GL_FLOAT, GL.GL_FALSE, 0, c_void_p(0));
+        #glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0)
 
         #/* Draw the three vertices as a triangle */
-        glDrawArrays (GL_TRIANGLES, 0, 3);
+        GL.glDrawArrays(GL.GL_TRIANGLES, 0, 12)
 
         #/* We finished using the buffers and program */
-        glDisableVertexAttribArray (0);
-        glBindBuffer (GL_ARRAY_BUFFER, 0)
-        glUseProgram (0);
-        
-        glDeleteBuffers (1, vao)
-        glDeleteProgram (program)
+        GL.glDisableVertexAttribArray(0)
+        GL.glUseProgram(0)
         
     def onMouseEvent(self, e):
         #TODO only redraw the relevant area
