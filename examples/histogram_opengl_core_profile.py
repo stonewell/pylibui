@@ -67,7 +67,7 @@ def init_buffers():
     return(vao, buffer)
 
 fragment_src = '''
-#version 130
+#version 150
 
 out vec4 outputColor;
 
@@ -77,7 +77,7 @@ void main() {
 '''
 
 vertex_src = '''
-#version 130
+#version 150
 
 in vec4 position;
 
@@ -94,15 +94,14 @@ def init_shaders():
         f_s
         )
 
-    GL.glDeleteShader(v_s)
-    GL.glDeleteShader(f_s)
-    
     return (program, 0)
 
 
 class MyArea(OpenGLArea):
     def __init__(self):
         super().__init__()
+        self._program = None
+        self._buffer = None
 
     def onDraw(self, params):
         GL.glClearColor(0.5, .5, 0.5, 1.0)
@@ -111,22 +110,17 @@ class MyArea(OpenGLArea):
         GL.glFlush()
         
     def drawObject2(self):
-        program, mvp_location = init_shaders()
+        if self._buffer is None:
+            vao, self._buffer = init_buffers()
 
-        vao, buffer = init_buffers()
+        if self._program is None:
+            self._program, mvp_location = init_shaders()
 
-        GL.glUseProgram(program)
+        GL.glUseProgram(self._program)
 
-        #/* Update the "mvp" matrix we use in the shader */
-        #glUniformMatrix4fv(mvp_location, 1, GL_FALSE, mvp)
-        #position_attribute = glGetAttribLocation(program, "position")
-
-        #/* Use the vertices in our buffer */
-        #glBindVertexArray(vao)
-        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, buffer)
+        GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self._buffer)
         GL.glEnableVertexAttribArray(0)
         GL.glVertexAttribPointer(0, 2, GL.GL_FLOAT, GL.GL_FALSE, 0, c_void_p(0));
-        #glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0)
 
         #/* Draw the three vertices as a triangle */
         GL.glDrawArrays(GL.GL_TRIANGLES, 0, 12)
