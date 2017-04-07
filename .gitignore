@@ -25,3 +25,6 @@ pylibui/libui_wrap.c
 
 venv/
 venv-dbg/
+
+*.swp
+*~
