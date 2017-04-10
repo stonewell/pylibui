@@ -58,7 +58,7 @@ def pointLocations():
     i = 0
     vertex_data = []
     vertex_data.extend([0.0, 0.0])
-    
+
     for spinbox in datapoints:
         n = spinbox.getValue()
 
@@ -100,7 +100,7 @@ def set_buffer_data(buffer, vertex_data, color):
                         len(vertex_data) * 4,
                         len(color) * 4,
                         (GLfloat * len(color))(*color))
-    
+
 fragment_src = '''
 #version 150
 
@@ -177,11 +177,8 @@ class MyArea(OpenGLArea):
         self._buffer = None
 
     def onDraw(self, params):
-        glClearColor(0, 1, 0, 0)
-        glClear(GL_COLOR_BUFFER_BIT)
-        
-        glViewport(0, 0, int(params.AreaWidth), int(params.AreaHeight))
-        
+        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+
         vertex_data = pointLocations()
 
         if (isOpenGLCoreProfile()):
@@ -198,8 +195,6 @@ class MyArea(OpenGLArea):
         glDisable(GL_CULL_FACE)
         glDisable(GL_LIGHTING)
         glEnable(GL_TEXTURE_2D)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         glColor3f(1.0, 0.85, 0.35)
 
@@ -220,19 +215,19 @@ class MyArea(OpenGLArea):
 
         t = translation([-1.0, -1.0, 0.0])
         s = scale([2.0, 2.0, 1.0])
-        
+
         glUniformMatrix4fv(U("translate"), 1, True, t)
         glUniformMatrix4fv(U("scale"), 1, True, s)
 
         graphR, graphG, graphB, graphA = colorButton.getColor();
 
-        color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
-        
+        color = [graphR, graphG, graphB, graphA * 0.5] * int(len(vertex_data) / 2)
+
         set_buffer_data(self._buffer, vertex_data, color)
-        
+
         glEnableVertexAttribArray(A('position'))
         glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
-        
+
         glEnableVertexAttribArray(A('inputColor'))
         glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
 
