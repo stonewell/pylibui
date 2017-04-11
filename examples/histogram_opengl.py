@@ -54,23 +54,25 @@ def inPoint(x, y, xtest, ytest):
                 (y >= ytest - pointRadius) and
                 (y <= ytest + pointRadius))
 
-def pointLocations():
+def pointLocations(linesOnly = False):
     i = 0
     vertex_data = []
-    vertex_data.extend([0.0, 0.0])
+
+    if not linesOnly:
+        vertex_data.extend([0.0, 0.0])
 
     for spinbox in datapoints:
         n = spinbox.getValue()
 
-        vertex_data.append(float(i) / 9)
+        vertex_data.append(float(i) / 9 )
         vertex_data.append(float(n) / 100)
 
-        vertex_data.append(float(i + 1) / 9)
-        vertex_data.append(0)
+        if not linesOnly:
+            if i < len(datapoints) - 1:
+                vertex_data.append(float(i + 1) / 9 )
+                vertex_data.append(0)
 
         i += 1
-
-    vertex_data.extend([1.0, 0.0])
 
     return vertex_data
 
@@ -177,12 +179,19 @@ class MyArea(OpenGLArea):
         self._buffer = None
 
     def onDraw(self, params):
-        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+        glClearColor(1.0, 1.0, 1.0, 1.0)
+        glClear(GL_COLOR_BUFFER_BIT)
+        
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT,  GL_NICEST)
+        
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        vertex_data = pointLocations()
-
+        glEnable( GL_MULTISAMPLE )
+        
         if (isOpenGLCoreProfile()):
-            self.drawObject2_CoreProfile(vertex_data)
+            self.drawObject2_CoreProfile(params)
         else:
             self.drawObject2_Legacy()
         glFlush()
@@ -204,7 +213,7 @@ class MyArea(OpenGLArea):
         glVertex3f( 1.0, -1.0, 0.0)
         glEnd()
 
-    def drawObject2_CoreProfile(self, vertex_data):
+    def drawObject2_CoreProfile(self, params):
         if self._buffer is None:
             vao, self._buffer = init_buffers()
 
@@ -220,6 +229,8 @@ class MyArea(OpenGLArea):
         glUniformMatrix4fv(U("scale"), 1, True, s)
 
         graphR, graphG, graphB, graphA = colorButton.getColor();
+        
+        vertex_data = pointLocations()
 
         color = [graphR, graphG, graphB, graphA * 0.5] * int(len(vertex_data) / 2)
 
@@ -231,9 +242,57 @@ class MyArea(OpenGLArea):
         glEnableVertexAttribArray(A('inputColor'))
         glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
 
+        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
         #/* Draw the three vertices as a triangle */
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(vertex_data) / 2))
 
+        #Draw Axis
+        axis = [
+            -1.0, -1.0,
+            -1.0, 1.0,
+            1.0, -1.0,
+            1.0, 1.0
+        ]
+
+        axis_color = [0.0, 0.0, 0.0, 1.0] * int(len(axis) / 2)
+        set_buffer_data(self._buffer, axis, axis_color)
+        glEnableVertexAttribArray(A('position'))
+        
+        glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
+
+        glEnableVertexAttribArray(A('inputColor'))
+        glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(axis) * 4));
+
+        #X
+        glViewport(xoffLeft - 3,
+                       yoffBottom - 3,
+                       int(params.AreaWidth - xoffLeft + 3 - xoffRight),
+                       3)
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
+
+        #Y
+        glViewport(xoffLeft - 3,
+                       yoffTop - 3,
+                       3,
+                       int(params.AreaHeight - yoffBottom + 3 - yoffTop))
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
+
+        #draw think lines
+        vertex_data = pointLocations(True)
+
+        color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
+
+        set_buffer_data(self._buffer, vertex_data, color)
+
+        glEnableVertexAttribArray(A('position'))
+        glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
+
+        glEnableVertexAttribArray(A('inputColor'))
+        glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
+
+        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+        glDrawArrays(GL_LINE_STRIP, 0, int(len(vertex_data) / 2))
+        
         #/* We finished using the buffers and program */
         glDisableVertexAttribArray(0)
         glUseProgram(0)
