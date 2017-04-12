@@ -3,12 +3,18 @@
 
 """
 import random
+
+from ctypes import sizeof, c_float, c_void_p, c_uint
+
 from pylibui.core import App
 from pylibui.controls import *
 from pylibui import libui
 from OpenGL.GL import *
 from OpenGL.GL.shaders import compileShader, compileProgram
 import numpy as np
+
+from opengl_utils import U, A, V3, translation, scale
+from opengl_line import draw_lines
 
 histogram = None
 
@@ -76,8 +82,6 @@ def pointLocations(linesOnly = False):
 
     return vertex_data
 
-from ctypes import sizeof, c_float, c_void_p, c_uint
-
 def init_buffers():
     #/* We only use one VAO, so we always keep it bound */
     vao = glGenVertexArrays(1)
@@ -129,32 +133,6 @@ void main() {
 }
 '''
 
-# Provide a terse way to get a uniform location from its name
-def U(name):
-    p = glGetIntegerv(GL_CURRENT_PROGRAM)
-    return glGetUniformLocation(p, name)
-
-def A(name):
-    p = glGetIntegerv(GL_CURRENT_PROGRAM)
-    return glGetAttribLocation(p, name)
-
-# Provide a terse way to create a f32 numpy 3-tuple
-def V3(x, y, z):
-    return np.array([x, y, z], 'f')
-
-def translation(direction):
-    M = np.identity(4)
-    M[:3, 3] = direction[:3]
-    return M
-
-def scale(factor):
-    m = np.identity(4)
-    m[0, 0] = factor[0]
-    m[1, 1] = factor[1]
-    m[2, 2] = factor[2]
-
-    return m
-
 def init_shaders():
     v_s = compileShader(vertex_src, GL_VERTEX_SHADER)
     f_s = compileShader(fragment_src, GL_FRAGMENT_SHADER)
@@ -190,8 +168,24 @@ class MyArea(OpenGLArea):
 
         glEnable( GL_MULTISAMPLE )
         
+        vertex_data = [-.0, -.5, 0.0,
+                           -0.0, -.5, 1.0,
+                       1.0, -.5, 1.0,
+                           1.0, -.5, 0.0,
+                           -.0, -.5, 1.0,
+                           1.0, -.5, 1.0,
+                       1.0, -.5, 0.0,
+                           1.0, -.5, 0.0]#pointLocations(True)
+
+        graphR, graphG, graphB, graphA = colorButton.getColor()
+        color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 3)
+        
+        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+        draw_lines(vertex_data, color, 10, [params.AreaWidth, params.AreaHeight])
+
         if (isOpenGLCoreProfile()):
-            self.drawObject2_CoreProfile(params)
+            #self.drawObject2_CoreProfile(params)
+            pass
         else:
             self.drawObject2_Legacy()
         glFlush()
@@ -277,25 +271,31 @@ class MyArea(OpenGLArea):
                        int(params.AreaHeight - yoffBottom + 3 - yoffTop))
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
 
-        #draw think lines
+        #draw thick lines
         vertex_data = pointLocations(True)
 
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
-
-        set_buffer_data(self._buffer, vertex_data, color)
-
-        glEnableVertexAttribArray(A('position'))
-        glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
-
-        glEnableVertexAttribArray(A('inputColor'))
-        glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
-
+        
         glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
-        glDrawArrays(GL_LINE_STRIP, 0, int(len(vertex_data) / 2))
+
+        if False:
+            set_buffer_data(self._buffer, vertex_data, color)
+            
+            glEnableVertexAttribArray(A('position'))
+            glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
+
+            glEnableVertexAttribArray(A('inputColor'))
+            glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
+
+            #glDrawArrays(GL_LINE_STRIP, 0, int(len(vertex_data) / 2))
+            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, int(len(vertex_data) / 2))
+        else:
+            glDisableVertexAttribArray(0)
+            glUseProgram(0)
+            
+            draw_lines(vertex_data, color, 10, [params.AreaWidth, params.AreaHeight])
         
         #/* We finished using the buffers and program */
-        glDisableVertexAttribArray(0)
-        glUseProgram(0)
 
     def onMouseEvent(self, e):
         vertex_data = pointLocations()
