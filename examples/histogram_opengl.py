@@ -157,6 +157,19 @@ class MyArea(OpenGLArea):
         self._buffer = None
 
     def onDraw(self, params):
+        width, height = int(params.AreaWidth), int(params.AreaHeight)
+
+        msaa = True
+        
+        if msaa:
+            tex = glGenTextures( 1)
+            glBindTexture( GL_TEXTURE_2D_MULTISAMPLE, tex )
+            glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, 8, GL_RGBA8, width, height, False )
+
+            fbo = glGenFramebuffers( 1 )
+            glBindFramebuffer( GL_FRAMEBUFFER, fbo );
+            glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex, 0 );
+        
         glClearColor(1.0, 1.0, 1.0, 1.0)
         glClear(GL_COLOR_BUFFER_BIT)
         
@@ -166,12 +179,17 @@ class MyArea(OpenGLArea):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        glEnable( GL_MULTISAMPLE )
-        
         if (isOpenGLCoreProfile()):
             self.drawObject2_CoreProfile(params)
         else:
             self.drawObject2_Legacy()
+
+        if msaa:
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo)
+            glDrawBuffer(GL_BACK)
+            glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+        
         glFlush()
 
     def drawObject2_Legacy(self):
