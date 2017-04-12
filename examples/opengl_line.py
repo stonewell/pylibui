@@ -77,27 +77,32 @@ def draw_lines(vertex_data, color_data, thickness, viewport):
 
     glUseProgram(_draw_lines_data.program)
 
-    t = translation([-.0, -.0, 0.0])
-    s = scale([1.0, 1.0, 1.0])
+    t = translation([-1.0, -1.0, 0.0])
+    s = scale([2.0, 2.0, 1.0])
 
-    glLineWidth(1.0)
+    #add the adjacency point
+    vertex_data.insert(0, 0.0)
+    vertex_data.insert(0, 0.0)
+    vertex_data.append(1.0)
+    vertex_data.append(0.0)
+    
     glUniformMatrix4fv(U("translate"), 1, True, t)
     glUniformMatrix4fv(U("scale"), 1, True, s)
 
     #glUniformMatrix4fv(U("ModelViewProjectionMatrix"), 1, True, s)
-    glUniform2fv(U("Viewport"), 1, True, (GLfloat*2)(*viewport))
-    glUniform1f(U("Thickness"), 1, True, (GLfloat)(thickness))
-    glUniform1f(U("MiterLimit"), 1, True, (GLfloat)(.1))
+    glUniform2f(U("Viewport"), (GLfloat)(viewport[0]), (GLfloat)(viewport[1]))
+    glUniform1f(U("Thickness"), (GLfloat)(thickness))
+    glUniform1f(U("MiterLimit"), (GLfloat)(.1))
 
     _set_buffer_data(_draw_lines_data.buffer, vertex_data, color_data)
     
     glEnableVertexAttribArray(A("Vertex"))
-    glVertexAttribPointer(A("Vertex"), 3, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
+    glVertexAttribPointer(A("Vertex"), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
 
     glEnableVertexAttribArray(A("Color"))
     glVertexAttribPointer(A("Color"), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
     
-    glDrawArrays(GL_LINES_ADJACENCY, 0, int(len(vertex_data) / 3))
+    glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, int(len(vertex_data) / 2))
 
     glDisableVertexAttribArray(A("Vertex"))
     glDisableVertexAttribArray(A("Color"))

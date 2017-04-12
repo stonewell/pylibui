@@ -8,7 +8,6 @@
  * \copyright MIT license
 */
 
-//uniform mat4 ModelViewProjectionMatrix;
 uniform mat4 translate;
 uniform mat4 scale;
 
@@ -22,5 +21,5 @@ out VertexData{
 void main(void)
 {
     VertexOut.mColor = Color;
-    gl_Position = Vertex;//ModelViewProjectionMatrix * Vertex;
+    gl_Position = translate * scale * Vertex;
 }

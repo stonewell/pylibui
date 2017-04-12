@@ -79,7 +79,7 @@ def pointLocations(linesOnly = False):
                 vertex_data.append(0)
 
         i += 1
-
+        
     return vertex_data
 
 def init_buffers():
@@ -168,24 +168,8 @@ class MyArea(OpenGLArea):
 
         glEnable( GL_MULTISAMPLE )
         
-        vertex_data = [-.0, -.5, 0.0,
-                           -0.0, -.5, 1.0,
-                       1.0, -.5, 1.0,
-                           1.0, -.5, 0.0,
-                           -.0, -.5, 1.0,
-                           1.0, -.5, 1.0,
-                       1.0, -.5, 0.0,
-                           1.0, -.5, 0.0]#pointLocations(True)
-
-        graphR, graphG, graphB, graphA = colorButton.getColor()
-        color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 3)
-        
-        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
-        draw_lines(vertex_data, color, 10, [params.AreaWidth, params.AreaHeight])
-
         if (isOpenGLCoreProfile()):
-            #self.drawObject2_CoreProfile(params)
-            pass
+            self.drawObject2_CoreProfile(params)
         else:
             self.drawObject2_Legacy()
         glFlush()
@@ -271,31 +255,18 @@ class MyArea(OpenGLArea):
                        int(params.AreaHeight - yoffBottom + 3 - yoffTop))
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
 
+        glDisableVertexAttribArray(0)
         #draw thick lines
         vertex_data = pointLocations(True)
 
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
         
-        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+        viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
+        glViewport(xoffLeft, yoffTop, viewport[0], viewport[1])
+        draw_lines(vertex_data, color, 3, viewport)
 
-        if False:
-            set_buffer_data(self._buffer, vertex_data, color)
-            
-            glEnableVertexAttribArray(A('position'))
-            glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
-
-            glEnableVertexAttribArray(A('inputColor'))
-            glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
-
-            #glDrawArrays(GL_LINE_STRIP, 0, int(len(vertex_data) / 2))
-            glDrawArrays(GL_LINE_STRIP_ADJACENCY, 0, int(len(vertex_data) / 2))
-        else:
-            glDisableVertexAttribArray(0)
-            glUseProgram(0)
-            
-            draw_lines(vertex_data, color, 10, [params.AreaWidth, params.AreaHeight])
-        
         #/* We finished using the buffers and program */
+        glUseProgram(0)
 
     def onMouseEvent(self, e):
         vertex_data = pointLocations()
