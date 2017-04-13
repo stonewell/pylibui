@@ -69,7 +69,7 @@ class DrawLinesData(object):
 
 _draw_lines_data = DrawLinesData()
 
-def draw_lines(vertex_data, color_data, thickness, viewport):
+def draw_lines(vertex_data_origin, color_data_origin, thickness, viewport):
     _draw_lines_data.create()
 
     glEnable(GL_LINE_SMOOTH)
@@ -81,10 +81,21 @@ def draw_lines(vertex_data, color_data, thickness, viewport):
     s = scale([2.0, 2.0, 1.0])
 
     #add the adjacency point
+    vertex_data = vertex_data_origin[:]
+    color_data = color_data_origin[:]
+    
     vertex_data.insert(0, 0.0)
     vertex_data.insert(0, 0.0)
     vertex_data.append(1.0)
     vertex_data.append(0.0)
+    color_data.insert(0, 1.0)
+    color_data.insert(0, 1.0)
+    color_data.insert(0, 1.0)
+    color_data.insert(0, 0.0)
+    color_data.append(1.0)
+    color_data.append(1.0)
+    color_data.append(1.0)
+    color_data.append(0.0)
     
     glUniformMatrix4fv(U("translate"), 1, True, t)
     glUniformMatrix4fv(U("scale"), 1, True, s)
