@@ -15,6 +15,7 @@ import numpy as np
 
 from opengl_utils import U, A, V3, translation, scale
 from opengl_line import draw_lines
+from opengl_circle import draw_circles
 
 histogram = None
 
@@ -171,7 +172,7 @@ class MyArea(OpenGLArea):
             glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex, 0 );
         
         glClearColor(1.0, 1.0, 1.0, 1.0)
-        glClear(GL_COLOR_BUFFER_BIT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT,  GL_NICEST)
@@ -238,7 +239,7 @@ class MyArea(OpenGLArea):
         glEnableVertexAttribArray(A('inputColor'))
         glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
 
-        glViewport(xoffLeft, yoffTop, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+        glViewport(xoffLeft, yoffBottom, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
         #/* Draw the three vertices as a triangle */
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(vertex_data) / 2))
 
@@ -268,20 +269,35 @@ class MyArea(OpenGLArea):
 
         #Y
         glViewport(xoffLeft - 3,
-                       yoffTop - 3,
+                       yoffBottom - 3,
                        3,
                        int(params.AreaHeight - yoffBottom + 3 - yoffTop))
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
 
         glDisableVertexAttribArray(0)
+        
         #draw thick lines
         vertex_data = pointLocations(True)
 
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
         
         viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
-        glViewport(xoffLeft, yoffTop, viewport[0], viewport[1])
-        draw_lines(vertex_data, color, 3, viewport)
+        glViewport(xoffLeft, yoffBottom, viewport[0], viewport[1])
+        draw_lines(vertex_data, color, 3, viewport, t, s)
+
+        #draw circles
+        vertex_data = pointLocations(True)
+        color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
+
+        viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
+        glViewport(xoffLeft, yoffBottom, viewport[0], viewport[1])
+
+        for i in range(0, len(vertex_data), 2):
+            x, y = vertex_data[i], vertex_data[i + 1]
+
+            circle_color = [graphR, graphG, graphB, graphA]
+
+            draw_circles([x, y], pointRadius, circle_color, [xoffLeft, yoffBottom, viewport[0], viewport[1]], t, s);
 
         #/* We finished using the buffers and program */
         glUseProgram(0)
