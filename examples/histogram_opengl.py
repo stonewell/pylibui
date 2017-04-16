@@ -47,14 +47,28 @@ colorButton = None
 datapoints = []
 currentPoint = -1
 
+AreaWidth = 0
+AreaHeight = 0
+
+x_scale_factor = 2.0
+y_scale_factor = 2.0
+x_translate_factor = -1.0
+y_translate_factor = -1.0
+
 def graphSize(clientWidth, clientHeight):
     return (clientWidth - xoffLeft - xoffRight,
                 clientHeight - yoffTop - yoffBottom)
 
 def inPoint(x, y, xtest, ytest):
-    # TODO switch to using a matrix
-    x -= xoffLeft
-    y -= yoffTop
+    xtest = (xtest * x_scale_factor * (AreaWidth - xoffLeft - xoffRight) / 2
+                 + x_translate_factor * (AreaWidth - xoffLeft - xoffRight) / 2
+                 + (AreaWidth - xoffLeft - xoffRight) / 2)
+    ytest = (ytest * y_scale_factor * (AreaHeight - yoffTop - yoffBottom) / 2
+                 + y_translate_factor * (AreaHeight - yoffTop - yoffBottom) / 2
+                 + (AreaHeight - yoffTop - yoffBottom) / 2)
+
+    xtest += xoffLeft
+    ytest = AreaHeight - ytest - yoffBottom
 
     return ((x >= xtest - pointRadius) and
                 (x <= xtest + pointRadius) and
@@ -217,10 +231,15 @@ class MyArea(OpenGLArea):
         if self._program is None:
             self._program, mvp_location = init_shaders()
 
+        #save the Area size
+        global AreaWidth
+        global AreaHeight
+        AreaWidth, AreaHeight = params.AreaWidth, params.AreaHeight
+        
         glUseProgram(self._program)
 
-        t = translation([-1.0, -1.0, 0.0])
-        s = scale([2.0, 2.0, 1.0])
+        t = translation([x_translate_factor, y_translate_factor, 0.0])
+        s = scale([x_scale_factor, y_scale_factor, 1.0])
 
         glUniformMatrix4fv(U("translate"), 1, True, t)
         glUniformMatrix4fv(U("scale"), 1, True, s)
@@ -295,7 +314,10 @@ class MyArea(OpenGLArea):
         for i in range(0, len(vertex_data), 2):
             x, y = vertex_data[i], vertex_data[i + 1]
 
-            circle_color = [graphR, graphG, graphB, graphA]
+            if i == currentPoint:
+                circle_color = [1.0, 0.0, 0.0, 1.0]
+            else:
+                circle_color = [graphR, graphG, graphB, graphA]
 
             draw_circles([x, y], pointRadius, circle_color, [xoffLeft, yoffBottom, viewport[0], viewport[1]], t, s);
 
@@ -303,11 +325,12 @@ class MyArea(OpenGLArea):
         glUseProgram(0)
 
     def onMouseEvent(self, e):
-        vertex_data = pointLocations()
+        vertex_data = pointLocations(True)
 
         found = -1
+
         for i in range(0, len(vertex_data), 2):
-            if inPoint(e.X, e.Y, vertex_data[i] * 9, vertex_data[i + 1] * 100):
+            if inPoint(e.X, e.Y, vertex_data[i], vertex_data[i + 1]):
                 found = i
                 break
 
