@@ -71,7 +71,7 @@ class Area(Control):
         """
         super().__init__()
         self._ah = _AreaHandler(self)
-        self.control = self._createControl(self._ah, args, kwargs)
+        self.control = self._createControl(self._ah, *args, *kwargs)
 
     def _createControl(self, ah, *args, **kwargs):
         return libui.uiNewArea(ah)

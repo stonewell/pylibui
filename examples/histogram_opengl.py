@@ -94,7 +94,7 @@ def pointLocations(linesOnly = False):
                 vertex_data.append(0)
 
         i += 1
-        
+
     return vertex_data
 
 def init_buffers():
@@ -167,7 +167,7 @@ def isOpenGLCoreProfile():
 
 class MyArea(OpenGLArea):
     def __init__(self):
-        super().__init__()
+        super().__init__(1920, 1280)
         self._program = None
         self._buffer = None
 
@@ -175,7 +175,7 @@ class MyArea(OpenGLArea):
         width, height = int(params.AreaWidth), int(params.AreaHeight)
 
         msaa = True
-        
+
         if msaa:
             tex = glGenTextures( 1)
             glBindTexture( GL_TEXTURE_2D_MULTISAMPLE, tex )
@@ -184,13 +184,13 @@ class MyArea(OpenGLArea):
             fbo = glGenFramebuffers( 1 )
             glBindFramebuffer( GL_FRAMEBUFFER, fbo );
             glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex, 0 );
-        
+
         glClearColor(1.0, 1.0, 1.0, 1.0)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        
+
         glEnable(GL_LINE_SMOOTH)
         glHint(GL_LINE_SMOOTH_HINT,  GL_NICEST)
-        
+
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -204,7 +204,7 @@ class MyArea(OpenGLArea):
             glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo)
             glDrawBuffer(GL_BACK)
             glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST)
-        
+
         glFlush()
 
     def drawObject2_Legacy(self):
@@ -235,7 +235,7 @@ class MyArea(OpenGLArea):
         global AreaWidth
         global AreaHeight
         AreaWidth, AreaHeight = params.AreaWidth, params.AreaHeight
-        
+
         glUseProgram(self._program)
 
         t = translation([x_translate_factor, y_translate_factor, 0.0])
@@ -245,7 +245,7 @@ class MyArea(OpenGLArea):
         glUniformMatrix4fv(U("scale"), 1, True, s)
 
         graphR, graphG, graphB, graphA = colorButton.getColor();
-        
+
         vertex_data = pointLocations()
 
         color = [graphR, graphG, graphB, graphA * 0.5] * int(len(vertex_data) / 2)
@@ -273,7 +273,7 @@ class MyArea(OpenGLArea):
         axis_color = [0.0, 0.0, 0.0, 1.0] * int(len(axis) / 2)
         set_buffer_data(self._buffer, axis, axis_color)
         glEnableVertexAttribArray(A('position'))
-        
+
         glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
 
         glEnableVertexAttribArray(A('inputColor'))
@@ -294,12 +294,12 @@ class MyArea(OpenGLArea):
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
 
         glDisableVertexAttribArray(0)
-        
+
         #draw thick lines
         vertex_data = pointLocations(True)
 
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
-        
+
         viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
         glViewport(xoffLeft, yoffBottom, viewport[0], viewport[1])
         draw_lines(vertex_data, color, 3, viewport, t, s)
