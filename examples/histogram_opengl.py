@@ -165,7 +165,7 @@ def isOpenGLCoreProfile():
 
     return major >= 3
 
-class MyArea(OpenGLArea):
+class MyArea(ScrollingOpenGLArea):
     def __init__(self):
         super().__init__(1920, 1280)
         self._program = None
@@ -194,6 +194,9 @@ class MyArea(OpenGLArea):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
+        glEnable(GL_SCISSOR_TEST)
+        glScissor(int(params.ClipX), int(params.ClipY), int(params.ClipWidth), int(params.ClipHeight))
+        
         if (isOpenGLCoreProfile()):
             self.drawObject2_CoreProfile(params)
         else:
