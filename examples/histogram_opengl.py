@@ -110,6 +110,14 @@ def init_buffers():
 
 def set_buffer_data(buffer, vertex_data, color):
     glBindBuffer(GL_ARRAY_BUFFER, buffer)
+
+    if not color:
+        glBufferData(GL_ARRAY_BUFFER,
+                         len(vertex_data) * 4,
+                         (GLfloat * len(vertex_data))(*vertex_data),
+                         GL_STATIC_DRAW)
+        return
+
     glBufferData(GL_ARRAY_BUFFER,
                      len(vertex_data) * 4 + len(color) * 4,
                      c_void_p(0),
@@ -118,6 +126,7 @@ def set_buffer_data(buffer, vertex_data, color):
                         0,
                         len(vertex_data) * 4,
                         (GLfloat * len(vertex_data))(*vertex_data))
+
     glBufferSubData(GL_ARRAY_BUFFER,
                         len(vertex_data) * 4,
                         len(color) * 4,
@@ -149,9 +158,34 @@ void main() {
 }
 '''
 
-def init_shaders():
-    v_s = compileShader(vertex_src, GL_VERTEX_SHADER)
-    f_s = compileShader(fragment_src, GL_FRAGMENT_SHADER)
+texture_vertex_src = '''
+#version 150
+
+uniform mat4 translate;
+uniform mat4 scale;
+in vec4 position;
+out vec2 vTxCoord;
+
+void main() {
+  gl_Position = translate * scale * position;
+  vTxCoord = gl_Position.xy;
+}
+'''
+
+texture_fragment_src = '''
+#version 150
+
+uniform sampler2DMS renderedTexture;
+in vec2 vTxCoord;
+out vec4 outputColor;
+
+void main() {
+  outputColor = texelFetch(renderedTexture, ivec2(vTxCoord), 8);
+}
+'''
+def init_shaders(v_src, f_src):
+    v_s = compileShader(v_src, GL_VERTEX_SHADER)
+    f_s = compileShader(f_src, GL_FRAGMENT_SHADER)
     program = compileProgram(
         v_s,
         f_s
@@ -171,11 +205,13 @@ class MyArea(ScrollingOpenGLArea):
         super().__init__(1920, 1280)
         self._program = None
         self._buffer = None
+        self._texture_program = None
+        self._texture_buffer = None
 
     def onDraw(self, params):
         width, height = int(params.AreaWidth), int(params.AreaHeight)
 
-        msaa = not sys.platform.startswith('linux')
+        msaa = True
 
         if msaa:
             tex = glGenTextures(1)
@@ -183,6 +219,10 @@ class MyArea(ScrollingOpenGLArea):
             glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, 8, GL_RGBA8, width, height, False )
 
             fbo = glGenFramebuffers( 1 )
+
+            fbo_draw = glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING)
+            fbo_read = glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING)
+            
             glBindFramebuffer( GL_FRAMEBUFFER, fbo );
             glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex, 0 );
 
@@ -201,15 +241,65 @@ class MyArea(ScrollingOpenGLArea):
             self.drawObject2_Legacy()
 
         if msaa:
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo)
-            glDrawBuffer(GL_BACK)
-            glBlitFramebuffer(0, 0, width, height,
+            
+            if sys.platform.startswith('linux'):
+                glBindFramebuffer(GL_FRAMEBUFFER, fbo_draw)
+                self.drawTexture_CoreProfile(params, tex)
+            else:
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_draw)
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo)
+                glBlitFramebuffer(0, 0, width, height,
                                   0, 0, width,height,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST)
             glDeleteTextures(tex)
             glDeleteFramebuffers(1, (GLuint * 1)(*[fbo]))
         glFlush()
+
+    def drawTexture_CoreProfile(self, params, texture):
+        if self._texture_buffer is None:
+            vao, self._texture_buffer = init_buffers()
+
+        if self._texture_program is None:
+            self._texture_program, mvp_location = init_shaders(texture_vertex_src, texture_fragment_src)
+
+        #save the Area size
+        AreaWidth, AreaHeight = params.AreaWidth, params.AreaHeight
+
+        viewport_x = -int(params.ClipX) + xoffLeft
+        viewport_y = -int(params.AreaHeight) + int(params.ClipY) + int(params.ClipHeight) + yoffBottom
+
+        glUseProgram(self._texture_program)
+
+        t = translation([x_translate_factor, y_translate_factor, 0.0])
+        s = scale([x_scale_factor, y_scale_factor, 1.0])
+
+        glUniformMatrix4fv(U("translate"), 1, True, t)
+        glUniformMatrix4fv(U("scale"), 1, True, s)
+
+        glUniform1i(U("renderedTexture"), texture)
+
+        vertex_data = [
+            -1.0, -1.0,
+            -1.0, 1.0,
+            1.0, -1.0,
+            1.0, 1.0
+        ]
+
+        set_buffer_data(self._texture_buffer, vertex_data, None)
+
+        glEnableVertexAttribArray(A('position'))
+        glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
+        
+        glViewport(viewport_x,
+                       viewport_y,
+                       int(params.AreaWidth) - xoffRight - xoffLeft,
+                       int(params.AreaHeight) - yoffBottom - yoffTop)
+        
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(vertex_data) / 2))
+        
+        glDisableVertexAttribArray(A('position'))
+
+        glUseProgram(0)
 
     def drawObject2_Legacy(self):
         glMatrixMode(GL_PROJECTION)
@@ -233,13 +323,13 @@ class MyArea(ScrollingOpenGLArea):
             vao, self._buffer = init_buffers()
 
         if self._program is None:
-            self._program, mvp_location = init_shaders()
+            self._program, mvp_location = init_shaders(vertex_src, fragment_src)
 
         #save the Area size
         global AreaWidth
         global AreaHeight
         AreaWidth, AreaHeight = params.AreaWidth, params.AreaHeight
-        
+
         viewport_x = -int(params.ClipX) + xoffLeft
         viewport_y = -int(params.AreaHeight) + int(params.ClipY) + int(params.ClipHeight) + yoffBottom
 
