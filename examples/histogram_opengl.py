@@ -208,7 +208,7 @@ class MyArea(ScrollingOpenGLArea):
                                   0, 0, width,height,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST)
             glDeleteTextures(tex)
-            glDeleteFrameBuffers(1, fbo)
+            glDeleteFramebuffers(1, (GLuint * 1)(*[fbo]))
         glFlush()
 
     def drawObject2_Legacy(self):
