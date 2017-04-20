@@ -206,7 +206,7 @@ class MyArea(ScrollingOpenGLArea):
             glBlitFramebuffer(0, 0, width, height,
                                   0, 0, width,height,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST)
-
+            glDeleteTextures(tex)
         glFlush()
 
     def drawObject2_Legacy(self):
@@ -320,6 +320,7 @@ class MyArea(ScrollingOpenGLArea):
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
 
         viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
+
         glViewport(viewport_x, viewport_y, viewport[0], viewport[1])
 
         for i in range(0, len(vertex_data), 2):
