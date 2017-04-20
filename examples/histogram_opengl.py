@@ -2,6 +2,7 @@
  Shows an histogram window
 
 """
+import sys
 import random
 
 from ctypes import sizeof, c_float, c_void_p, c_uint
@@ -174,7 +175,7 @@ class MyArea(ScrollingOpenGLArea):
     def onDraw(self, params):
         width, height = int(params.AreaWidth), int(params.AreaHeight)
 
-        msaa = True
+        msaa = not sys.platform.startswith('linux')
 
         if msaa:
             tex = glGenTextures(1)
