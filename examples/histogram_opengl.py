@@ -177,7 +177,7 @@ class MyArea(ScrollingOpenGLArea):
         msaa = True
 
         if msaa:
-            tex = glGenTextures( 1)
+            tex = glGenTextures(1)
             glBindTexture( GL_TEXTURE_2D_MULTISAMPLE, tex )
             glTexImage2DMultisample( GL_TEXTURE_2D_MULTISAMPLE, 8, GL_RGBA8, width, height, False )
 
@@ -194,9 +194,6 @@ class MyArea(ScrollingOpenGLArea):
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-        glEnable(GL_SCISSOR_TEST)
-        glScissor(int(params.ClipX), int(params.ClipY), int(params.ClipWidth), int(params.ClipHeight))
-        
         if (isOpenGLCoreProfile()):
             self.drawObject2_CoreProfile(params)
         else:
@@ -206,7 +203,9 @@ class MyArea(ScrollingOpenGLArea):
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
             glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo)
             glDrawBuffer(GL_BACK)
-            glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+            glBlitFramebuffer(0, 0, width, height,
+                                  0, 0, width,height,
+                                  GL_COLOR_BUFFER_BIT, GL_NEAREST)
 
         glFlush()
 
@@ -238,6 +237,9 @@ class MyArea(ScrollingOpenGLArea):
         global AreaWidth
         global AreaHeight
         AreaWidth, AreaHeight = params.AreaWidth, params.AreaHeight
+        
+        viewport_x = -int(params.ClipX) + xoffLeft
+        viewport_y = -int(params.AreaHeight) + int(params.ClipY) + int(params.ClipHeight) + yoffBottom
 
         glUseProgram(self._program)
 
@@ -261,7 +263,10 @@ class MyArea(ScrollingOpenGLArea):
         glEnableVertexAttribArray(A('inputColor'))
         glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(vertex_data) * 4));
 
-        glViewport(xoffLeft, yoffBottom, int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop)
+        glViewport(viewport_x,
+                       viewport_y,
+                       int(params.AreaWidth) - xoffRight - xoffLeft,
+                       int(params.AreaHeight) - yoffBottom - yoffTop)
         #/* Draw the three vertices as a triangle */
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(vertex_data) / 2))
 
@@ -283,15 +288,15 @@ class MyArea(ScrollingOpenGLArea):
         glVertexAttribPointer(A('inputColor'), 4, GL_FLOAT, GL_FALSE, 0, c_void_p(len(axis) * 4));
 
         #X
-        glViewport(xoffLeft - 3,
-                       yoffBottom - 3,
+        glViewport(viewport_x - 3,
+                        viewport_y - 3,
                        int(params.AreaWidth - xoffLeft + 3 - xoffRight),
                        3)
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
 
         #Y
-        glViewport(xoffLeft - 3,
-                       yoffBottom - 3,
+        glViewport(viewport_x - 3,
+                        viewport_y - 3,
                        3,
                        int(params.AreaHeight - yoffBottom + 3 - yoffTop))
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(axis) / 2))
@@ -304,7 +309,10 @@ class MyArea(ScrollingOpenGLArea):
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
 
         viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
-        glViewport(xoffLeft, yoffBottom, viewport[0], viewport[1])
+        glViewport(viewport_x,
+                        viewport_y,
+                       viewport[0],
+                       viewport[1])
         draw_lines(vertex_data, color, 3, viewport, t, s)
 
         #draw circles
@@ -312,7 +320,7 @@ class MyArea(ScrollingOpenGLArea):
         color = [graphR, graphG, graphB, graphA] * int(len(vertex_data) / 2)
 
         viewport = [int(params.AreaWidth) - xoffRight - xoffLeft, int(params.AreaHeight) - yoffBottom - yoffTop]
-        glViewport(xoffLeft, yoffBottom, viewport[0], viewport[1])
+        glViewport(viewport_x, viewport_y, viewport[0], viewport[1])
 
         for i in range(0, len(vertex_data), 2):
             x, y = vertex_data[i], vertex_data[i + 1]
@@ -322,7 +330,7 @@ class MyArea(ScrollingOpenGLArea):
             else:
                 circle_color = [graphR, graphG, graphB, graphA]
 
-            draw_circles([x, y], pointRadius, circle_color, [xoffLeft, yoffBottom, viewport[0], viewport[1]], t, s);
+            draw_circles([x, y], pointRadius, circle_color, [viewport_x, viewport_y, viewport[0], viewport[1]], t, s);
 
         #/* We finished using the buffers and program */
         glUseProgram(0)
