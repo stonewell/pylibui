@@ -73,8 +73,8 @@ def draw_circles(center, radius, color, viewport, t = translation([-0.0, -0.0, 0
 
     x, y = center[0], center[1]
 
-    x_delta = float(radius) * 2 / viewport[0]
-    y_delta = float(radius) * 2 / viewport[1]
+    x_delta = float(radius) * 2 / viewport[2]
+    y_delta = float(radius) * 2 / viewport[3]
 
     vertex_data = [
         x - x_delta, y - y_delta,
