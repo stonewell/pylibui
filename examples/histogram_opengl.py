@@ -161,13 +161,11 @@ void main() {
 texture_vertex_src = '''
 #version 150
 
-uniform mat4 translate;
-uniform mat4 scale;
 in vec4 position;
 out vec2 vTxCoord;
 
 void main() {
-  gl_Position = translate * scale * position;
+  gl_Position = position;
   vTxCoord = gl_Position.xy;
 }
 '''
@@ -179,8 +177,60 @@ uniform sampler2DMS renderedTexture;
 in vec2 vTxCoord;
 out vec4 outputColor;
 
+vec4 ReadMultisampledTexture(in sampler2DMS tex, in ivec2 pos, in int numSamples)
+{
+  vec4 texel = vec4(0,0,0,0);
+  for (int i = 0; i < numSamples; ++i)
+  {
+	vec4 sample = texelFetch(tex, pos, i);
+
+	texel += sample;
+  }
+
+  return texel / float(numSamples);
+}
+
+vec4 FilterMultisampledTextureBilinear(in sampler2DMS tex, in vec2 texcoord, in int numSamples)
+{
+  ivec2 texSize = textureSize(tex);
+
+  float x = (texcoord.x + 1) * texSize.x / 2.0;
+  float y = (texcoord.y + 1) * texSize.y / 2.0;
+
+  // top-left texel position
+  vec2 pos00 = floor( vec2(x, y) );
+  ivec2 loc00 = ivec2(pos00);
+
+  // lerp weights
+  vec2 alpha = fract( vec2(x, y) );
+  // bilinear filtering
+  // lerp in u-direction top
+  vec4 sampleX0 = mix(
+    ReadMultisampledTexture(tex, loc00, numSamples),
+    ReadMultisampledTexture(tex, loc00 + ivec2(1,0), numSamples),
+	alpha.x);
+
+  // lerp in u-direction bottom
+  vec4 sampleX1 = mix(
+    ReadMultisampledTexture(tex, loc00 + ivec2(0,1), numSamples),
+    ReadMultisampledTexture(tex, loc00 + ivec2(1,1), numSamples),
+	alpha.x);
+
+  // lerp in v direction
+  return mix(sampleX0, sampleX1, alpha.y);
+}
+
 void main() {
-  outputColor = texelFetch(renderedTexture, ivec2(vTxCoord), 8);
+  float x = (vTxCoord.x + 1) * 1920 / 2;
+  float y = (vTxCoord.y + 1) * 1280 / 2;
+
+  vec4 color = vec4(0,0,0,0);
+  for (int i = 0; i < 8; i++)
+    color += texelFetch(renderedTexture, ivec2(x, y), i);
+
+  outputColor = color / 8.0;
+
+  outputColor = FilterMultisampledTextureBilinear(renderedTexture, vTxCoord, 8);
 }
 '''
 def init_shaders(v_src, f_src):
@@ -212,7 +262,8 @@ class MyArea(ScrollingOpenGLArea):
         width, height = int(params.AreaWidth), int(params.AreaHeight)
 
         msaa = True
-
+        useTexture = True
+        
         if msaa:
             tex = glGenTextures(1)
             glBindTexture( GL_TEXTURE_2D_MULTISAMPLE, tex )
@@ -222,7 +273,7 @@ class MyArea(ScrollingOpenGLArea):
 
             fbo_draw = glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING)
             fbo_read = glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING)
-            
+
             glBindFramebuffer( GL_FRAMEBUFFER, fbo );
             glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, tex, 0 );
 
@@ -241,13 +292,16 @@ class MyArea(ScrollingOpenGLArea):
             self.drawObject2_Legacy()
 
         if msaa:
-            
-            if sys.platform.startswith('linux'):
-                glBindFramebuffer(GL_FRAMEBUFFER, fbo_draw)
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_draw)
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo_read)
+
+            if useTexture:
                 self.drawTexture_CoreProfile(params, tex)
             else:
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo_draw)
                 glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo)
+                if fbo_draw == 0:
+                    glDrawBuffer(GL_BACK)
+
                 glBlitFramebuffer(0, 0, width, height,
                                   0, 0, width,height,
                                   GL_COLOR_BUFFER_BIT, GL_NEAREST)
@@ -262,21 +316,15 @@ class MyArea(ScrollingOpenGLArea):
         if self._texture_program is None:
             self._texture_program, mvp_location = init_shaders(texture_vertex_src, texture_fragment_src)
 
-        #save the Area size
-        AreaWidth, AreaHeight = params.AreaWidth, params.AreaHeight
-
-        viewport_x = -int(params.ClipX) + xoffLeft
-        viewport_y = -int(params.AreaHeight) + int(params.ClipY) + int(params.ClipHeight) + yoffBottom
-
         glUseProgram(self._texture_program)
+
+        glActiveTexture(GL_TEXTURE0)
+        glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, texture)
 
         t = translation([x_translate_factor, y_translate_factor, 0.0])
         s = scale([x_scale_factor, y_scale_factor, 1.0])
 
-        glUniformMatrix4fv(U("translate"), 1, True, t)
-        glUniformMatrix4fv(U("scale"), 1, True, s)
-
-        glUniform1i(U("renderedTexture"), texture)
+        glUniform1i(U("renderedTexture"), 0)
 
         vertex_data = [
             -1.0, -1.0,
@@ -289,14 +337,15 @@ class MyArea(ScrollingOpenGLArea):
 
         glEnableVertexAttribArray(A('position'))
         glVertexAttribPointer(A('position'), 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0));
-        
-        glViewport(viewport_x,
-                       viewport_y,
-                       int(params.AreaWidth) - xoffRight - xoffLeft,
-                       int(params.AreaHeight) - yoffBottom - yoffTop)
-        
+
+        glViewport(0, 0,
+                       int(params.AreaWidth),
+                       int(params.AreaHeight))
+
+        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
         glDrawArrays(GL_TRIANGLE_STRIP, 0, int(len(vertex_data) / 2))
-        
+
         glDisableVertexAttribArray(A('position'))
 
         glUseProgram(0)
